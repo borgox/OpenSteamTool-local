@@ -154,7 +154,8 @@ timeout_send_ms    = 10000
 timeout_recv_ms    = 10000
 ```
 
-### Additional Lua config directories (optional)
+### Additional Lua config directories
+
 ```toml
 [lua]
 paths = []
