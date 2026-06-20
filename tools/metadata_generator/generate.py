@@ -194,7 +194,7 @@ def generate_ipc(dll_path, output_dir):
     out_path = os.path.join(output_dir, f"{sha256}.toml")
     with open(out_path, "w") as f:
         f.write("\n".join(toml_lines))
-    print(f"Generated IPC TOML file: {out_path}")
+    print(f"Written to cache: {out_path}")
 
 # --- Protobuf Extractor Logic ---
 
@@ -371,53 +371,95 @@ def extract_protobufs(dll_path, output_dir):
                     
     print(f"Extracted {extracted_count} protobuf files into {output_dir}")
 
+# --- Helpers ---
+
+def _steam_cache_root(dll_path):
+    """Given a DLL path, return <steam_root>/opensteamtool/."""
+    return os.path.join(os.path.dirname(dll_path), "opensteamtool")
+
 # --- CLI Setup ---
 
 def main():
-    parser = argparse.ArgumentParser(description="Steam Monitor Metadata & Protobuf Generator Tool")
+    parser = argparse.ArgumentParser(
+        description="Steam Monitor Metadata & Protobuf Generator Tool",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""\
+When output_dir is omitted the tool writes directly into the OpenSteamTool
+cache tree inside the Steam installation directory so the loader picks up
+the files automatically on the next Steam launch:
+
+  ipc      -> <Steam>/opensteamtool/ipc/steamclient/<sha256>.toml
+  protobuf -> <Steam>/opensteamtool/protobuf/<component>/<name>.proto
+  pattern  -> written by pattern_scanner, not this tool
+  all      -> all of the above, derived from the Steam directory
+"""
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
     
     # IPC Command
     ipc_parser = subparsers.add_parser("ipc", help="Generate IPC TOML file from steamclient64.dll")
     ipc_parser.add_argument("dll_path", help="Path to steamclient64.dll")
-    ipc_parser.add_argument("output_dir", help="Directory where generated TOML will be written")
+    ipc_parser.add_argument("output_dir", nargs="?", default=None,
+                            help="Output directory (default: <Steam>/opensteamtool/ipc/steamclient/)")
     
     # Protobuf Command
     proto_parser = subparsers.add_parser("protobuf", help="Extract all embedded .proto files from DLL")
     proto_parser.add_argument("dll_path", help="Path to steamclient64.dll or steamui.dll")
-    proto_parser.add_argument("output_dir", help="Directory where .proto files will be extracted")
+    proto_parser.add_argument("output_dir", nargs="?", default=None,
+                              help="Output directory (default: <Steam>/opensteamtool/protobuf/<component>/)")
     
     # All Command
     all_parser = subparsers.add_parser("all", help="Extract both IPC and Protobuf definitions from a Steam installation")
     all_parser.add_argument("steam_dir", help="Path to Steam root installation directory")
-    all_parser.add_argument("output_dir", help="Main output directory")
+    all_parser.add_argument("output_dir", nargs="?", default=None,
+                            help="Output root (default: <steam_dir>/opensteamtool/)")
     
     args = parser.parse_args()
     
     try:
         if args.command == "ipc":
-            generate_ipc(args.dll_path, args.output_dir)
+            if args.output_dir:
+                out = args.output_dir
+            else:
+                # Default: <steam_root>/opensteamtool/ipc/steamclient/
+                out = os.path.join(_steam_cache_root(args.dll_path), "ipc", "steamclient")
+                print(f"No output_dir given — writing to cache: {out}")
+            generate_ipc(args.dll_path, out)
+
         elif args.command == "protobuf":
-            extract_protobufs(args.dll_path, args.output_dir)
+            dll_name = os.path.splitext(os.path.basename(args.dll_path))[0].lower()
+            component = "steamui" if "steamui" in dll_name else "steamclient"
+            if args.output_dir:
+                out = args.output_dir
+            else:
+                out = os.path.join(_steam_cache_root(args.dll_path), "protobuf", component)
+                print(f"No output_dir given — writing to cache: {out}")
+            extract_protobufs(args.dll_path, out)
+
         elif args.command == "all":
+            cache_root = os.path.join(args.steam_dir, "opensteamtool") if not args.output_dir \
+                         else args.output_dir
+            if not args.output_dir:
+                print(f"No output_dir given — writing to cache root: {cache_root}")
+
             client_path = os.path.join(args.steam_dir, "steamclient64.dll")
             ui_path = os.path.join(args.steam_dir, "steamui.dll")
-            
+
             if not os.path.exists(client_path):
-                # Try relative resolution
-                client_path = os.path.join(args.steam_dir, "steamclient64.dll")
-            if not os.path.exists(ui_path):
-                ui_path = os.path.join(args.steam_dir, "steamui.dll")
-                
-            print(f"Scanning {client_path} for IPC and Protobuf definitions...")
-            generate_ipc(client_path, os.path.join(args.output_dir, "ipc", "steamclient"))
-            extract_protobufs(client_path, os.path.join(args.output_dir, "protobuf", "steamclient"))
-            
+                raise FileNotFoundError(f"steamclient64.dll not found in {args.steam_dir}")
+
+            print(f"Scanning {client_path} for IPC definitions...")
+            generate_ipc(client_path, os.path.join(cache_root, "ipc", "steamclient"))
+
+            print(f"Scanning {client_path} for Protobuf definitions...")
+            extract_protobufs(client_path, os.path.join(cache_root, "protobuf", "steamclient"))
+
             if os.path.exists(ui_path):
                 print(f"Scanning {ui_path} for Protobuf definitions...")
-                extract_protobufs(ui_path, os.path.join(args.output_dir, "protobuf", "steamui"))
+                extract_protobufs(ui_path, os.path.join(cache_root, "protobuf", "steamui"))
             else:
                 print("steamui.dll not found, skipping UI protobuf extraction.")
+
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)

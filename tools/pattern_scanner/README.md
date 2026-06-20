@@ -3,9 +3,17 @@
 This guide describes how to troubleshoot, find, and update byte-pattern signatures for `steamclient64.dll` and `steamui.dll` when a Steam client update breaks them.
 
 > [!NOTE]
-> **Quick Start**: run the scanner against your Steam install directory:
+> **Quick Start**: run the scanner against your Steam install directory — no output path needed.
 > ```powershell
-> .\pattern_scanner.exe "C:\Program Files (x86)\Steam" .\output
+> .\pattern_scanner.exe "C:\Program Files (x86)\Steam"
+> ```
+> Files are written straight into the OpenSteamTool cache:
+> - `<Steam>/opensteamtool/pattern/steamclient/<sha256>.toml`
+> - `<Steam>/opensteamtool/pattern/steamui/<sha256>.toml`
+>
+> Pass a second argument to override the output location:
+> ```powershell
+> .\pattern_scanner.exe "C:\Program Files (x86)\Steam" D:\my-toml-files
 > ```
 > Each generated `.toml` file is named after the SHA-256 hash of the scanned DLL,
 > matching the structure expected by `steam-monitor`.
@@ -157,13 +165,17 @@ sig = "48 8B 05 XX XX XX XX C3"
 
 ## 7. Full Workflow: After a Steam Update
 
-1. Run the scanner:
+1. Run the scanner — no output path needed; it writes to the Steam cache automatically:
    ```powershell
-   .\pattern_scanner.exe "C:\Program Files (x86)\Steam" .\output
+   .\pattern_scanner.exe "C:\Program Files (x86)\Steam"
    ```
+   Output lands in:
+   - `<Steam>/opensteamtool/pattern/steamclient/<sha256>.toml`
+   - `<Steam>/opensteamtool/pattern/steamui/<sha256>.toml`
 2. Check the console for any `[WARNING] Could not find pattern for function:` lines.
 3. For each warning, use sections 1–5 above to locate the new function and build a new signature.
 4. Add the new signature to the `sigs` array inside `main.rs` for the relevant function definition.
 5. Rebuild: `cargo build --release`
 6. Re-run the scanner to confirm the warning is gone.
-7. Upload the generated `steamclient/<sha256>.toml` and `steamui/<sha256>.toml` files to the appropriate branches of `steam-monitor`.
+7. The TOML files are already in the cache — Steam will use them on the next launch.
+   If you also want to upload them to `steam-monitor`, find them at the paths listed in step 1.

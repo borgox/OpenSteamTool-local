@@ -424,6 +424,9 @@ fn process_dll(dll_path: &Path, is_steamui: bool, out_dir: &Path) -> io::Result<
     }
 
     let component = if is_steamui { "steamui" } else { "steamclient" };
+    // Cache hierarchy: <out_dir>/<channel>/<component>/<sha256>.toml
+    // This mirrors what RemoteToml writes and reads under
+    // <Steam>/opensteamtool/pattern/<component>/<sha256>.toml
     let component_dir = out_dir.join(component);
     fs::create_dir_all(&component_dir)?;
 
@@ -433,7 +436,7 @@ fn process_dll(dll_path: &Path, is_steamui: bool, out_dir: &Path) -> io::Result<
         writeln!(out_file, "{}", line)?;
     }
 
-    println!("  Generated patterns to: {}", out_file_path.display());
+    println!("  Written to cache: {}", out_file_path.display());
     Ok(())
 }
 
@@ -441,18 +444,27 @@ fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
         println!("Usage: pattern_scanner <steam_directory_or_dll_path> [output_directory]");
-        println!("Example: pattern_scanner \"C:\\Program Files (x86)\\Steam\" .\\output");
+        println!("  steam_directory  — path to the Steam root (contains steamclient64.dll).");
+        println!("                    Default output: <steam_dir>/opensteamtool/pattern/");
+        println!("  output_directory — optional override for the output root.");
+        println!("                    Files are written as <out>/<component>/<sha256>.toml");
+        println!();
+        println!("Examples:");
+        println!("  pattern_scanner \"C:\\Program Files (x86)\\Steam\"");
+        println!("  pattern_scanner \"C:\\Steam\" D:\\my-toml-files");
         return Ok(());
     }
 
     let input_path = Path::new(&args[1]);
-    let out_dir = if args.len() >= 3 {
-        PathBuf::from(&args[2])
-    } else {
-        env::current_dir()?
-    };
 
     if input_path.is_dir() {
+        // Default: write into the standard OpenSteamTool cache tree inside the Steam dir.
+        let out_dir = if args.len() >= 3 {
+            PathBuf::from(&args[2])
+        } else {
+            input_path.join("opensteamtool").join("pattern")
+        };
+
         let client_path = input_path.join("steamclient64.dll");
         let ui_path = input_path.join("steamui.dll");
 
@@ -468,6 +480,13 @@ fn main() -> io::Result<()> {
             println!("No steamui.dll found in {}", input_path.display());
         }
     } else if input_path.is_file() {
+        // Single-DLL mode: output dir must be explicit (no Steam root to infer from).
+        let out_dir = if args.len() >= 3 {
+            PathBuf::from(&args[2])
+        } else {
+            env::current_dir()?
+        };
+
         let filename = input_path.file_name().unwrap().to_string_lossy().to_lowercase();
         if filename.contains("steamui") {
             process_dll(input_path, true, &out_dir)?;

@@ -11,28 +11,45 @@ It is designed to automate updating the `ipc` and `protobuf` branches of the `st
 
 ## Usage
 
-You can run the script via `python generate.py` with three subcommands:
+You can run the script via `python generate.py` with three subcommands.
 
-### 1. Extract both IPC and Protobuf definitions from a Steam installation
-Automatically locates `steamclient64.dll` and `steamui.dll` under your Steam folder, scans them, and writes the output structured exactly for the `steam-monitor` repository branches:
+**`output_dir` is optional in all subcommands.** When omitted the tool writes straight into the OpenSteamTool cache tree inside the Steam directory, so the files are picked up automatically on the next Steam launch — no copying needed.
+
+### 1. Extract both IPC and Protobuf definitions from a Steam installation (recommended)
+
 ```powershell
-python generate.py all "C:\Program Files (x86)\Steam" .\output
+# Writes directly into the Steam cache — zero extra steps needed.
+python generate.py all "C:\Program Files (x86)\Steam"
 ```
-The output directory will contain:
-- `output/ipc/steamclient/<sha256>.toml` (for `ipc` branch)
-- `output/protobuf/steamclient/*.proto` (for `protobuf` branch)
-- `output/protobuf/steamui/*.proto` (for `protobuf` branch)
+
+Default output locations:
+- `<Steam>/opensteamtool/ipc/steamclient/<sha256>.toml`
+- `<Steam>/opensteamtool/protobuf/steamclient/*.proto`
+- `<Steam>/opensteamtool/protobuf/steamui/*.proto`
+
+Override the root if you want files somewhere else:
+```powershell
+python generate.py all "C:\Program Files (x86)\Steam" D:\my-toml-files
+```
 
 ### 2. Generate IPC TOML file only
-Generates vtable and method mapping TOML for the `ipc` branch:
+
 ```powershell
-python generate.py ipc "C:\Program Files (x86)\Steam\steamclient64.dll" .\output_ipc
+# Default: writes to <Steam>/opensteamtool/ipc/steamclient/<sha256>.toml
+python generate.py ipc "C:\Program Files (x86)\Steam\steamclient64.dll"
+
+# Or specify an explicit output directory:
+python generate.py ipc "C:\Steam\steamclient64.dll" D:\my-output
 ```
 
 ### 3. Extract Protobuf files only
-Extracts and formats all embedded `.proto` files back into human-readable source code:
+
 ```powershell
-python generate.py protobuf "C:\Program Files (x86)\Steam\steamclient64.dll" .\output_proto
+# Default: writes to <Steam>/opensteamtool/protobuf/steamclient/
+python generate.py protobuf "C:\Program Files (x86)\Steam\steamclient64.dll"
+
+# Or specify an explicit output directory:
+python generate.py protobuf "C:\Steam\steamui.dll" D:\my-protos
 ```
 
 ## How It Works
