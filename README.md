@@ -38,6 +38,12 @@ This fork extends the original OpenSteamTool with a few extras aimed at people w
 3. **Offline / local-only mode** - two new `[remote]` config keys (`enabled` and `local_path`) let you disable outbound HTTPS completely and point the loader at a directory of hand-crafted or pre-generated `.toml` files. Great for corporate networks, air-gapped machines, or when you just prefer not to rely on a remote server.
 4. **Documentation** - guides on reverse-engineering the signatures if they stop matching a Steam update, written alongside the generator tools in `tools/metadata_generator/README.md`.
 
+# Fork TODOs:
+- Add linux support
+- Add a GUI or Tray app that manages OST and also has useful debug info thanks to the xinput1_4.dll proxy
+- Hope nothing breaks
+
+
 ## Feature
 
 ### Core Unlocks
