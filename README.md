@@ -29,6 +29,10 @@
   </p>
 </div>
 
+## Local Fork Changes:
+1. Add local resolvers and guides for .toml files. Once steam updates run all of those and replace the local files with the new ones.=
+2. Guides on how to reverse engineer the signatures if old ones stop working; Made by AI cause why not its simple stuff
+
 ## Feature
 
 ### Core Unlocks

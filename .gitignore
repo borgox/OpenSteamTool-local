@@ -21,3 +21,10 @@ build/
 
 # DLLs (keep only source files)
 !.deps/**/*.dll
+
+# Rust project and build artifactss
+target/
+*pattern_scanner*/output/
+
+# VsCode settings
+.vscode/
