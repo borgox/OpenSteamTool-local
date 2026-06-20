@@ -52,6 +52,7 @@ namespace ManifestClient {
         Make("opensteamtool", "https://manifest.opensteamtool.com/%llu",       ParsePlainUint),
         Make("wudrm",         "http://gmrc.wudrm.com/manifest/%llu",           ParsePlainUint),
         Make("steamrun",      "https://manifest.steam.run/api/manifest/%llu",  ParseSteamRunJson),
+        Make("none",          "",                                              nullptr),
     };
 
     static const Provider* g_active = &kProviders[0];   // opensteamtool
@@ -82,6 +83,10 @@ namespace ManifestClient {
 
     static bool FetchActive(uint64_t gid, uint64_t* outCode) {
         const Provider& p = *g_active;
+        if (p.name == "none") {
+            LOG_MANIFEST_INFO("Manifest resolve bypassed (url = none) for gid={}", gid);
+            return false;
+        }
         const Config::ManifestTimeouts timeouts = Config::GetManifestTimeouts();
 
         char urlLog[256];

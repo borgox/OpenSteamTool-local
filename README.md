@@ -150,7 +150,7 @@ The file is watched while Steam is running; valid changes are hot-reloaded witho
 level = "info"
 
 [manifest]
-# Upstream API for depot manifest request codes.  Options: "opensteamtool", "steamrun", "wudrm"
+# Upstream API for depot manifest request codes.  Options: "opensteamtool", "steamrun", "wudrm", "none"
 url = "opensteamtool"
 
 # HTTP timeouts for manifest requests (milliseconds)
@@ -158,6 +158,7 @@ timeout_resolve_ms = 5000
 timeout_connect_ms = 5000
 timeout_send_ms    = 10000
 timeout_recv_ms    = 10000
+```
 
 # Additional Lua config directories (optional).
 # Files are loaded after the default <Steam>/config/lua folder.
@@ -179,6 +180,11 @@ enabled = true
 # local_path = "C:/path/to/your/toml-files"
 # url_template = "https://your.server/{channel}/{component}/{sha256}.toml"
 ```
+
+### Local Offline Manifests
+
+To be fully local, set `url = "none"` under `[manifest]` and run `steam-fixer` on every lua everytime you want to add a new game, this may break DLC's if they arent in ur manifest (unknown).
+
 
 ### Manifest via Lua
 
