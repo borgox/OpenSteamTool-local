@@ -41,6 +41,7 @@ This fork extends the original OpenSteamTool with a few extras aimed at people w
 # Fork TODOs:
 - Add linux support
 - Add a GUI or Tray app that manages OST and also has useful debug info thanks to the xinput1_4.dll proxy
+- Find a way to replace manifest API with a local url (unlikely to happen)
 - Hope nothing breaks
 
 
