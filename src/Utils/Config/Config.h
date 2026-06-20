@@ -33,6 +33,8 @@ namespace Config {
     std::string GetLogDir();
     std::vector<std::string> GetLuaPaths();
     std::string GetRemoteUrlTemplate();
+    bool        GetRemoteEnabled();
+    std::string GetLocalTomlPath();
     InjectionSettings GetInjectionSettings();
 
     // [manifest] — provider selection lives in ManifestClient (table-driven).
@@ -52,6 +54,12 @@ namespace Config {
 
     // [remote]
     inline std::string remoteUrlTemplate;
+    // If false, the HTTP mirror chain is skipped entirely; only the local
+    // cache (or localTomlPath, if set) is consulted.
+    inline bool remoteEnabled  = true;
+    // Optional directory that is searched for <sha256>.toml files before
+    // the auto-managed cache.  Useful for fully offline/air-gapped setups.
+    inline std::string localTomlPath;
 
     // [inject] - optional library injection into game processes.
     inline bool injectEnabled = false;

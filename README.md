@@ -29,9 +29,14 @@
   </p>
 </div>
 
-## Local Fork Changes:
-1. Add local resolvers and guides for .toml files. Once steam updates run all of those and replace the local files with the new ones.=
-2. Guides on how to reverse engineer the signatures if old ones stop working; Made by AI cause why not its simple stuff
+## Local Fork Changes
+
+This fork extends the original OpenSteamTool with a few extras aimed at people who want to manage steam-monitor data themselves or run fully offline.
+
+1. **Local metadata generator** (`tools/metadata_generator/`) — Python scripts that extract the IPC wrapper addresses and protobuf interface descriptors straight from `steamclient64.dll` and `steamui.dll`. Run these after every Steam update to produce the `.toml` files that OpenSteamTool normally fetches from GitHub.
+2. **Pattern scanner** (`tools/pattern_scanner/`) — fast Rust tool that scans the Steam DLLs for the byte-pattern signatures used by the hook layer. Outputs a `.toml` file whose SHA-256 name matches what the remote lookup expects, so you can drop it directly into your `local_path` folder.
+3. **Offline / local-only mode** — two new `[remote]` config keys (`enabled` and `local_path`) let you disable outbound HTTPS completely and point the loader at a directory of hand-crafted or pre-generated `.toml` files. Great for corporate networks, air-gapped machines, or when you just prefer not to rely on a remote server.
+4. **Documentation** — guides on reverse-engineering the signatures if they stop matching a Steam update, written alongside the generator tools in `tools/metadata_generator/README.md`.
 
 ## Feature
 
@@ -160,8 +165,11 @@ enabled = false
 # library_x64 = "OpenSteamTool.GameHook.x64.dll"
 # library_x86 = "OpenSteamTool.GameHook.x86.dll"
 
-# Optional metadata mirror. See "Steam version compatibility" below.
+# Optional metadata mirror / offline mode. See "Steam version compatibility" below.
 [remote]
+# Set to false to disable all outbound HTTPS requests for metadata.
+enabled = true
+# local_path = "C:/path/to/your/toml-files"
 # url_template = "https://your.server/{channel}/{component}/{sha256}.toml"
 ```
 
@@ -192,9 +200,10 @@ OpenSteamTool no longer ships byte-pattern signatures inside the DLL. Instead, o
 
 Lookup order (every launch):
 
-1. **GitHub raw** — `https://raw.githubusercontent.com/OpenSteam001/steam-monitor/pattern/...`. Canonical source.
-2. **jsDelivr CDN** — automatic fallback if GitHub raw is unreachable (connection refused / timeout / 5xx). No configuration required. Useful in regions where `raw.githubusercontent.com` is blocked but jsDelivr is reachable (e.g. mainland China).
-3. **Local cache** — `<Steam>\opensteamtool\pattern\<subdir>\<sha256>.toml`. Used **only** when remote is unreachable. The cache is overwritten after every successful remote fetch.
+1. **`local_path` directory** — if `remote.local_path` is set in `opensteamtool.toml`, the loader checks that directory for `<sha256>.toml` first. Files produced by the bundled `pattern_scanner` and `metadata_generator` tools can be dropped here.
+2. **GitHub raw** — `https://raw.githubusercontent.com/OpenSteam001/steam-monitor/pattern/...`. Canonical remote source. Skipped when `remote.enabled = false`.
+3. **jsDelivr CDN** — automatic fallback if GitHub raw is unreachable (timeout / 5xx). Useful in regions where `raw.githubusercontent.com` is blocked. Skipped when `remote.enabled = false`.
+4. **Local cache** — `<Steam>\opensteamtool\pattern\<subdir>\<sha256>.toml`. Written after every successful remote fetch; used when remote is unreachable or disabled.
 
 Remote is consulted on every launch so users automatically pick up upstream re-publications (e.g. the bot adding a new signature, or fixing an existing one) without having to clear any cache.
 
@@ -202,11 +211,25 @@ If a step returns **HTTP 404** the mirror loop stops immediately — all mirrors
 
 You can also drop a pattern TOML into the cache directory manually if you know the layout for a given build; the file name must be `<sha256>.toml`. The cache fallback will pick it up the next time remote is unreachable.
 
-> A short outbound HTTPS request is performed at every launch (one per DLL: `steamclient64.dll`, `steamui.dll`). The downloaded bodies are tiny (~10 KB each) and the work runs on a worker thread, so it never blocks Steam's loader.
+> A short outbound HTTPS request is performed at every launch (one per DLL: `steamclient64.dll`, `steamui.dll`). The downloaded bodies are tiny (~10 KB each) and the work runs on a worker thread, so it never blocks Steam's loader. Set `remote.enabled = false` to skip this entirely.
+
+#### Offline / local-only mode
+
+If you want zero outbound traffic — for example on an air-gapped machine or a network that blocks GitHub — add the following to your `opensteamtool.toml`:
+
+```toml
+[remote]
+enabled   = false
+local_path = "C:/path/to/your/toml-files"
+```
+
+With `enabled = false` the HTTP mirror chain is skipped completely. The loader still checks `local_path` (if set) and the auto-managed cache under `<Steam>/opensteamtool/`. Use the `pattern_scanner` and `metadata_generator` tools in the `tools/` directory to generate the `.toml` files for your current Steam build and place them in `local_path`.
+
+You can also keep `enabled = true` and still set `local_path`; in that case the local directory is checked first and the remote is only contacted when the file is not found there.
 
 #### Using a different mirror
 
-For most users, the built-in **GitHub -> jsDelivr** fallback is enough. To use a private mirror or intranet server, configure a full URL template. A custom mirror replaces the built-in remote sources; local cache fallback remains available.
+For most users, the built-in **GitHub → jsDelivr** fallback is enough. To use a private mirror or intranet server, configure a full URL template. A custom mirror replaces the built-in remote sources; local cache fallback remains available.
 
 The template must include `{channel}`, `{component}`, and `{sha256}`. Channels currently used are `pattern` and `ipc`.
 
@@ -248,7 +271,7 @@ The log level is controlled by `[log] level` in `opensteamtool.toml`.
 - Visual Studio 2022 with MSVC (x64 toolchain)
 
 ### Runtime requirements
-- Outbound HTTPS access to `raw.githubusercontent.com` on first launch after a Steam update (see [Steam version compatibility](#steam-version-compatibility)). Cached afterwards.
+- Outbound HTTPS access to `raw.githubusercontent.com` on first launch after a Steam update (see [Steam version compatibility](#steam-version-compatibility)). Cached afterwards. Set `remote.enabled = false` in `opensteamtool.toml` to run completely offline once you have the TOML files in place.
 
 ### Quick build
 ```powershell

@@ -73,9 +73,25 @@ enabled = false
 # library_x86 = "OpenSteamTool.GameHook.x86.dll"
 
 [remote]
-# Optional metadata mirror. Leave unset to use GitHub with jsDelivr fallback.
-# A custom mirror replaces the built-in remote sources and must include all
-# three placeholders: {channel}, {component}, and {sha256}.
+# Set to false to disable ALL outbound HTTPS requests for metadata.
+# When disabled, only local_path (if set) and the auto-managed cache are
+# consulted.  Useful for offline / air-gapped setups or corporate networks
+# that block raw.githubusercontent.com and jsDelivr.
+# Default: true (remote fetch enabled).
+enabled = true
+
+# Optional directory that is searched for <sha256>.toml files BEFORE the
+# auto-managed cache under <Steam>/opensteamtool/.  Put files produced by
+# the pattern_scanner and metadata_generator tools here when running fully
+# offline.  The file name must be exactly <sha256>.toml.
+# This directory is checked regardless of the enabled flag above, so you
+# can keep remote fetch on while still seeding a fast local fallback.
+#
+# local_path = "C:/steam-toml-files"
+
+# Optional custom mirror — replaces the built-in GitHub + jsDelivr chain.
+# Must include all three placeholders: {channel}, {component}, {sha256}.
+# Channels currently in use: "pattern", "ipc".
 #
 # url_template = "https://your.server/{channel}/{component}/{sha256}.toml"
 # url_template = "https://fast.jsdelivr.net/gh/OpenSteam001/steam-monitor@{channel}/{component}/{sha256}.toml"

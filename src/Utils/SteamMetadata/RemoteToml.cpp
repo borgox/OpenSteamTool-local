@@ -101,8 +101,41 @@ Result Fetch(const Request& request)
                  request.channel, request.component, cacheDir.string(), mkdirEc.message());
     }
 
-    // 3. Try remote (mirror chain with early-out on 404).
-    const std::vector<std::string> urlTemplates = BuildUrlTemplates();
+    // 3. Try remote (mirror chain with early-out on 404) — unless disabled.
+    const bool remoteEnabled = Config::GetRemoteEnabled();
+    const std::string localTomlPath = Config::GetLocalTomlPath();
+
+    // 3a. Check user-specified local_path first (before auto-managed cache).
+    if (!localTomlPath.empty()) {
+        fs::path manualPath = fs::path(localTomlPath) / (out.sha256 + ".toml");
+        if (fs::exists(manualPath)) {
+            LOG_INFO("RemoteToml({}/{}): loading from local_path: {}",
+                     request.channel, request.component, manualPath.string());
+            std::ifstream ifs(manualPath, std::ios::binary);
+            if (ifs) {
+                std::string buf((std::istreambuf_iterator<char>(ifs)),
+                                 std::istreambuf_iterator<char>());
+                if (!buf.empty()) {
+                    out.body = std::move(buf);
+                    out.ok = true;
+                    out.fromCache = true;
+                    return out;
+                }
+            }
+            LOG_WARN("RemoteToml({}/{}): local_path file unreadable or empty: {}",
+                     request.channel, request.component, manualPath.string());
+        } else {
+            LOG_WARN("RemoteToml({}/{}): local_path set but file not found: {}",
+                     request.channel, request.component, manualPath.string());
+        }
+    }
+
+    if (!remoteEnabled) {
+        LOG_INFO("RemoteToml({}/{}): remote fetch disabled, checking local cache only",
+                 request.channel, request.component);
+    }
+
+    const std::vector<std::string> urlTemplates = remoteEnabled ? BuildUrlTemplates() : std::vector<std::string>{};
     OSTPlatform::Http::Result http;
     std::string lastUrl;
 

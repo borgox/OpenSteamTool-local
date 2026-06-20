@@ -17,6 +17,8 @@ namespace {
         std::string logDir;
         std::vector<std::string> luaPaths;
         std::string remoteUrlTemplate;
+        bool        remoteEnabled = true;
+        std::string localTomlPath;
         InjectionSettings injection;
     };
 
@@ -50,6 +52,8 @@ namespace {
         logDir                 = snapshot.logDir;
         luaPaths               = snapshot.luaPaths;
         remoteUrlTemplate      = snapshot.remoteUrlTemplate;
+        remoteEnabled          = snapshot.remoteEnabled;
+        localTomlPath          = snapshot.localTomlPath;
         injectEnabled          = snapshot.injection.enabled;
         injectLibraryX86       = snapshot.injection.libraryX86;
         injectLibraryX64       = snapshot.injection.libraryX64;
@@ -133,6 +137,12 @@ namespace {
                 if (auto val = (*remote)["url_template"].value<std::string>()) {
                     snapshot.remoteUrlTemplate = *val;
                 }
+                if (auto val = (*remote)["enabled"].value<bool>()) {
+                    snapshot.remoteEnabled = *val;
+                }
+                if (auto val = (*remote)["local_path"].value<std::string>()) {
+                    snapshot.localTomlPath = *val;
+                }
             }
 
             // [inject]
@@ -147,11 +157,12 @@ namespace {
 
             ApplyManifestProvider(snapshot.manifestProvider);
             LoadResult result = ApplySnapshotLocked(snapshot);
-            LOG_INFO("Config loaded: manifest.url={} log.level={} lua.paths={} remote.url_template={}",
+             LOG_INFO("Config loaded: manifest.url={} log.level={} lua.paths={} remote.url_template={} remote.enabled={}",
                      ManifestClient::ActiveProviderName(),
                      ToString(snapshot.logLevel),
                      (uint32_t)snapshot.luaPaths.size(),
-                     snapshot.remoteUrlTemplate.empty() ? "<default>" : snapshot.remoteUrlTemplate);
+                     snapshot.remoteUrlTemplate.empty() ? "<default>" : snapshot.remoteUrlTemplate,
+                     snapshot.remoteEnabled ? "true" : "false");
             return result;
 
         } catch (const toml::parse_error& e) {
@@ -203,6 +214,16 @@ namespace {
     std::string GetRemoteUrlTemplate() {
         std::lock_guard lock(g_mutex);
         return remoteUrlTemplate;
+    }
+
+    bool GetRemoteEnabled() {
+        std::lock_guard lock(g_mutex);
+        return remoteEnabled;
+    }
+
+    std::string GetLocalTomlPath() {
+        std::lock_guard lock(g_mutex);
+        return localTomlPath;
     }
 
     InjectionSettings GetInjectionSettings() {
