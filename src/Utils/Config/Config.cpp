@@ -19,6 +19,7 @@ namespace {
         std::string remoteUrlTemplate;
         bool        remoteEnabled = true;
         std::string localTomlPath;
+        bool statsEnableApi = true;
         InjectionSettings injection;
     };
 
@@ -54,6 +55,7 @@ namespace {
         remoteUrlTemplate      = snapshot.remoteUrlTemplate;
         remoteEnabled          = snapshot.remoteEnabled;
         localTomlPath          = snapshot.localTomlPath;
+        statsEnableApi         = snapshot.statsEnableApi;
         injectEnabled          = snapshot.injection.enabled;
         injectLibraryX86       = snapshot.injection.libraryX86;
         injectLibraryX64       = snapshot.injection.libraryX64;
@@ -84,10 +86,11 @@ namespace {
             LOG_INFO("Config file not found, using defaults");
             ApplyManifestProvider(snapshot.manifestProvider);
             LoadResult result = ApplySnapshotLocked(snapshot);
-            LOG_INFO("Config loaded: manifest.url={} log.level={} lua.paths={} remote.url_template={}",
+            LOG_INFO("Config loaded: manifest.url={} log.level={} lua.paths={} stats.enable_api={} remote.url_template={}",
                      ManifestClient::ActiveProviderName(),
                      ToString(GetLogLevel()),
                      (uint32_t)GetLuaPaths().size(),
+                     GetStatsEnableApi(),
                      GetRemoteUrlTemplate().empty() ? "<default>" : GetRemoteUrlTemplate());
             return result;
         }
@@ -145,6 +148,13 @@ namespace {
                 }
             }
 
+            // [stats]
+            if (auto stats = tbl["stats"].as_table()) {
+                if (auto val = (*stats)["enable_api"].value<bool>()) {
+                    snapshot.statsEnableApi = *val;
+                }
+            }
+
             // [inject]
             if (auto inject = tbl["inject"].as_table()) {
                 if (auto val = (*inject)["enabled"].value<bool>())
@@ -157,12 +167,13 @@ namespace {
 
             ApplyManifestProvider(snapshot.manifestProvider);
             LoadResult result = ApplySnapshotLocked(snapshot);
-             LOG_INFO("Config loaded: manifest.url={} log.level={} lua.paths={} remote.url_template={} remote.enabled={}",
-                     ManifestClient::ActiveProviderName(),
-                     ToString(snapshot.logLevel),
-                     (uint32_t)snapshot.luaPaths.size(),
-                     snapshot.remoteUrlTemplate.empty() ? "<default>" : snapshot.remoteUrlTemplate,
-                     snapshot.remoteEnabled ? "true" : "false");
+            LOG_INFO("Config loaded: manifest.url={} log.level={} lua.paths={} stats.enable_api={} remote.url_template={} remote.enabled={}",
+                ManifestClient::ActiveProviderName(),
+                ToString(snapshot.logLevel),
+                (uint32_t)snapshot.luaPaths.size(),
+                snapshot.statsEnableApi,
+                snapshot.remoteUrlTemplate.empty() ? "<default>" : snapshot.remoteUrlTemplate,
+                snapshot.remoteEnabled ? "true" : "false");
             return result;
 
         } catch (const toml::parse_error& e) {
@@ -233,6 +244,11 @@ namespace {
             injectLibraryX86,
             injectLibraryX64,
         };
+    }
+
+    bool GetStatsEnableApi() {
+        std::lock_guard lock(g_mutex);
+        return statsEnableApi;
     }
 
 }
