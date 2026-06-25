@@ -21,6 +21,7 @@ namespace {
         std::string localTomlPath;
         bool statsEnableApi = true;
         InjectionSettings injection;
+        CloudSettings cloud;
     };
 
     std::mutex g_mutex;
@@ -59,6 +60,8 @@ namespace {
         injectEnabled          = snapshot.injection.enabled;
         injectLibraryX86       = snapshot.injection.libraryX86;
         injectLibraryX64       = snapshot.injection.libraryX64;
+        cloudEnabled           = snapshot.cloud.enabled;
+        cloudLibrary           = snapshot.cloud.library;
     }
 
     void ApplyManifestProvider(const std::string& provider) {
@@ -165,6 +168,14 @@ namespace {
                     snapshot.injection.libraryX64 = *val;
             }
 
+            // [cloud]
+            if (auto cloud = tbl["cloud"].as_table()) {
+                if (auto val = (*cloud)["enabled"].value<bool>())
+                    snapshot.cloud.enabled = *val;
+                if (auto val = (*cloud)["library"].value<std::string>())
+                    snapshot.cloud.library = *val;
+            }
+
             ApplyManifestProvider(snapshot.manifestProvider);
             LoadResult result = ApplySnapshotLocked(snapshot);
             LOG_INFO("Config loaded: manifest.url={} log.level={} lua.paths={} stats.enable_api={} remote.url_template={} remote.enabled={}",
@@ -249,6 +260,14 @@ namespace {
     bool GetStatsEnableApi() {
         std::lock_guard lock(g_mutex);
         return statsEnableApi;
+    }
+
+    CloudSettings GetCloudSettings() {
+        std::lock_guard lock(g_mutex);
+        return {
+            cloudEnabled,
+            cloudLibrary,
+        };
     }
 
 }

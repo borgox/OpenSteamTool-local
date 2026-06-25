@@ -21,6 +21,11 @@ namespace Config {
         std::string libraryX64;
     };
 
+    struct CloudSettings {
+        bool enabled = false;
+        std::string library;
+    };
+
     struct LoadResult {
         bool applied = false;
         bool luaPathsChanged = false;
@@ -36,8 +41,12 @@ namespace Config {
     bool        GetRemoteEnabled();
     std::string GetLocalTomlPath();
     InjectionSettings GetInjectionSettings();
+<<<<<<< HEAD
 
     // [manifest] — provider selection lives in ManifestClient (table-driven).
+=======
+    CloudSettings GetCloudSettings();
+>>>>>>> 00984b41cc9713a278d87b5fcb7b6766be1948d8
     bool GetStatsEnableApi();
 
     // [manifest] — provider selection lives in ManifestClient (table-driven).
@@ -45,7 +54,11 @@ namespace Config {
     inline uint32_t manifestTimeoutConnect = 5000;
     inline uint32_t manifestTimeoutSend    = 10000;
     inline uint32_t manifestTimeoutRecv    = 10000;
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> 00984b41cc9713a278d87b5fcb7b6766be1948d8
     // [log]
     inline LogLevel logLevel = LogLevel::Debug;
 
@@ -73,5 +86,9 @@ namespace Config {
     inline bool injectEnabled = false;
     inline std::string injectLibraryX86;
     inline std::string injectLibraryX64;
+
+    // [cloud] - optional Steam Cloud save redirection via CloudRedirect.
+    inline bool cloudEnabled = false;
+    inline std::string cloudLibrary;
 
 }
